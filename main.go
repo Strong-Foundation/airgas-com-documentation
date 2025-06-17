@@ -10,8 +10,7 @@ import (
 	"os"            // For file operations
 	"path/filepath" // For the file path in the systems.
 	"regexp"        //
-	"strconv"
-	"strings" // For string manipulation
+	"strings"       // For string manipulation
 	"sync"
 	"time" // For time management
 )
@@ -55,30 +54,40 @@ func fileExists(filename string) bool {
 
 // getDataFromURL sends an HTTP GET request and writes response data to a file
 func getDataFromURL(uri string, fileName string, wg *sync.WaitGroup) {
-	response, err := http.Get(uri) // Send GET request
-	if err != nil {                // If error occurs
-		log.Println(err) // Log error
+	defer wg.Done() // Always defer Done early
+
+	var httpClient = &http.Client{
+		Timeout: 60 * time.Second,
 	}
-	if response.StatusCode != 200 { // Check for HTTP 200 OK
-		log.Println("Error the code is", uri, response.StatusCode) // Log error status
-		return                                                     // Exit if not successful
-	}
-	body, err := io.ReadAll(response.Body) // Read response body
+
+	response, err := httpClient.Get(uri)
 	if err != nil {
-		log.Println(err) // Log error
+		log.Printf("HTTP GET failed for %s: %v", uri, err)
+		return // Early return on error
 	}
-	err = response.Body.Close() // Close response body
+	defer func() {
+		if err := response.Body.Close(); err != nil {
+			log.Printf("Error closing response body for %s: %v", uri, err)
+		}
+	}()
+
+	if response.StatusCode != http.StatusOK {
+		log.Printf("Non-OK HTTP status %d for URL %s", response.StatusCode, uri)
+		return
+	}
+
+	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		log.Println(err) // Log error
+		log.Printf("Failed to read body for %s: %v", uri, err)
+		return
 	}
-	err = appendByteToFile(fileName, body) // Write body to file
-	if err != nil {
-		log.Println(err) // Log error
+
+	if err := appendByteToFile(fileName, body); err != nil {
+		log.Printf("Failed to write body to file for %s: %v", uri, err)
+		return
 	}
-	// Log the url.
+
 	log.Println("Completed Scraping URL:", uri)
-	// Close the function and make sure the waitgroup is closed.
-	defer wg.Done()
 }
 
 // urlToFilename converts a URL into a filesystem-safe filename
@@ -246,16 +255,21 @@ func main() {
 	}
 	if !fileExists(filename) {
 		var htmlDownloadWaitGroup sync.WaitGroup
-		baseURL := "https://www.airgas.com/sds-search?searchKeyWord=g&sortOrder=&searchPureGases=false&searchMixedGases=false&searchHardGoods=false&maintainType=true&page="
-		for i := 0; i <= 205; i++ {
-			url := baseURL + strconv.Itoa(i)
-			if isUrlValid(url) {
-				htmlDownloadWaitGroup.Add(1)
-				go getDataFromURL(url, filename, &htmlDownloadWaitGroup) // Download and save file if not
+		letters := "abcdefghijklmnopqrstuvwxyz"
+		for _, letter := range letters {
+			for i := 0; i <= 205; i++ {
+				// Sleep
+				time.Sleep(1 * time.Second)
+				url := fmt.Sprintf("https://www.airgas.com/sds-search?searchKeyWord=%c&sortOrder=&searchPureGases=false&searchMixedGases=false&searchHardGoods=false&maintainType=true&page=%d", letter, i)
+				if isUrlValid(url) {
+					htmlDownloadWaitGroup.Add(1)
+					go getDataFromURL(url, filename, &htmlDownloadWaitGroup)
+				}
 			}
 		}
 		htmlDownloadWaitGroup.Wait()
 	}
+
 	var extractedURL []string // Slice to hold all extracted URLs
 	// Read the file that the data was saved on and return the urls.
 	fileContent := readFileAndReturnAsString(filename)
