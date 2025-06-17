@@ -74,6 +74,8 @@ func getDataFromURL(uri string, fileName string) {
 	if err != nil {
 		log.Println(err) // Log error
 	}
+	// Log the url.
+	log.Println("Completed Scraping URL:", uri)
 }
 
 // urlToFilename converts a URL into a filesystem-safe filename
@@ -229,8 +231,8 @@ func extractPDFLinks(htmlContent string) []string {
 func main() {
 	filename := "index.html" // Generate filename from index
 	if !fileExists(filename) {
-		baseURL := "https://www.airgas.com/sds-search?searchKeyWord=.&sortOrder=&searchPureGases=false&searchMixedGases=false&searchHardGoods=false&maintainType=true&page="
-		for i := 0; i <= 25; i++ {
+		baseURL := "https://www.airgas.com/sds-search?searchKeyWord=a&sortOrder=&searchPureGases=false&searchMixedGases=false&searchHardGoods=false&maintainType=true&page="
+		for i := 0; i <= 235; i++ {
 			url := baseURL + strconv.Itoa(i)
 			if isUrlValid(url) {
 				getDataFromURL(url, filename) // Download and save file if not
