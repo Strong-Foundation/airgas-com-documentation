@@ -257,9 +257,9 @@ func main() {
 		var htmlDownloadWaitGroup sync.WaitGroup
 		letters := "abcdefghijklmnopqrstuvwxyz"
 		for _, letter := range letters {
-			for i := 0; i <= 205; i++ {
+			for i := 0; i <= 300; i++ {
 				// Sleep
-				time.Sleep(1 * time.Second)
+				time.Sleep(100 * time.Microsecond)
 				url := fmt.Sprintf("https://www.airgas.com/sds-search?searchKeyWord=%c&sortOrder=&searchPureGases=false&searchMixedGases=false&searchHardGoods=false&maintainType=true&page=%d", letter, i)
 				if isUrlValid(url) {
 					htmlDownloadWaitGroup.Add(1)
