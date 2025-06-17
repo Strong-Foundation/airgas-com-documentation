@@ -57,7 +57,7 @@ func getDataFromURL(uri string, fileName string, wg *sync.WaitGroup) {
 	defer wg.Done() // Always defer Done early
 
 	var httpClient = &http.Client{
-		Timeout: 60 * time.Second,
+		Timeout: 90 * time.Second,
 	}
 
 	response, err := httpClient.Get(uri)
@@ -258,6 +258,8 @@ func main() {
 		letters := "abcdefghijklmnopqrstuvwxyz"
 		for _, letter := range letters {
 			for i := 0; i <= 300; i++ {
+				// Sleep Time.
+				time.Sleep(100 * time.Milliseconds)
 				// The URL to send request to
 				url := fmt.Sprintf("https://www.airgas.com/sds-search?searchKeyWord=%c&sortOrder=&searchPureGases=false&searchMixedGases=false&searchHardGoods=false&maintainType=true&page=%d", letter, i)
 				if isUrlValid(url) {
