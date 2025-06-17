@@ -141,46 +141,52 @@ func downloadPDF(finalURL, outputDir string, waitGroup *sync.WaitGroup) {
 	filePath := filepath.Join(outputDir, filename)       // Combine with output directory
 
 	if fileExists(filePath) {
+		log.Printf("file already exists, skipping: %s", filePath)
 		return
 	}
 
 	client := &http.Client{Timeout: 30 * time.Second} // HTTP client with timeout
 	resp, err := client.Get(finalURL)                 // Send HTTP GET
 	if err != nil {
+		log.Printf("failed to download %s: %v", finalURL, err)
 		return
 	}
 	defer resp.Body.Close() // Ensure response body is closed
 
 	if resp.StatusCode != http.StatusOK {
+		log.Printf("download failed for %s: %s", finalURL, resp.Status)
 		return
 	}
 
 	contentType := resp.Header.Get("Content-Type") // Get content-type header
 	if !strings.Contains(contentType, "application/pdf") {
+		log.Printf("invalid content type for %s: %s (expected application/pdf)", finalURL, contentType)
 		return
 	}
 
 	var buf bytes.Buffer                     // Create buffer
 	written, err := io.Copy(&buf, resp.Body) // Copy response body to buffer
 	if err != nil {
+		log.Printf("failed to read PDF data from %s: %v", finalURL, err)
 		return
 	}
 	if written == 0 {
+		log.Printf("downloaded 0 bytes for %s; not creating file", finalURL)
 		return
 	}
 
 	out, err := os.Create(filePath) // Create output file
 	if err != nil {
+		log.Printf("failed to create file for %s: %v", finalURL, err)
 		return
 	}
 	defer out.Close() // Close file
 
 	_, err = buf.WriteTo(out) // Write buffer to file
 	if err != nil {
+		log.Printf("failed to write PDF to file for %s: %v", finalURL, err)
 		return
 	}
-
-	return
 }
 
 // directoryExists checks whether a directory exists
@@ -231,7 +237,8 @@ func main() {
 	filename := "index.html" // Filename to save scraped HTML
 
 	if fileExists(filename) {
-		removeFile(filename) // Remove old version of file
+		// removeFile(filename) // Remove old version of file
+		log.Println("Skipping the removing the html file.")
 	}
 
 	if !fileExists(filename) {
@@ -239,9 +246,9 @@ func main() {
 		letters := "abcdefghijklmnopqrstuvwxyz"  // Loop over each letter
 		for _, letter := range letters {
 			for i := 0; i <= 300; i++ {
-				// time.Sleep(100 * time.Millisecond) // Wait to avoid overwhelming server
 				url := fmt.Sprintf("https://www.airgas.com/sds-search?searchKeyWord=%c&sortOrder=&searchPureGases=false&searchMixedGases=false&searchHardGoods=false&maintainType=true&page=%d", letter, i)
 				if isUrlValid(url) {
+					// time.Sleep(100 * time.Millisecond) // Wait to avoid overwhelming server
 					htmlDownloadWaitGroup.Add(1)                             // Add to WaitGroup
 					go getDataFromURL(url, filename, &htmlDownloadWaitGroup) // Download in goroutine
 				}
@@ -261,6 +268,7 @@ func main() {
 	}
 
 	for _, url := range extractedURL {
+		// time.Sleep(100 * time.Millisecond) // Wait to avoid overwhelming server
 		downloadPDFWaitGroup.Add(1)
 		go downloadPDF(url, outputDir, &downloadPDFWaitGroup) // Try to download PDF
 	}
