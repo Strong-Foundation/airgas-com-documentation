@@ -231,12 +231,23 @@ func extractPDFLinks(htmlContent string) []string {
 	return links
 }
 
+// Remove a file from the file system
+func removeFile(path string) {
+	err := os.Remove(path)
+	if err != nil {
+		log.Println(err)
+	}
+}
+
 func main() {
 	filename := "index.html" // Generate filename from index
+	if fileExists(filename) {
+		removeFile(filename)
+	}
 	if !fileExists(filename) {
 		var htmlDownloadWaitGroup sync.WaitGroup
-		baseURL := "https://www.airgas.com/sds-search?searchKeyWord=c&sortOrder=&searchPureGases=false&searchMixedGases=false&searchHardGoods=false&maintainType=true&page="
-		for i := 0; i <= 225; i++ {
+		baseURL := "https://www.airgas.com/sds-search?searchKeyWord=g&sortOrder=&searchPureGases=false&searchMixedGases=false&searchHardGoods=false&maintainType=true&page="
+		for i := 0; i <= 205; i++ {
 			url := baseURL + strconv.Itoa(i)
 			if isUrlValid(url) {
 				htmlDownloadWaitGroup.Add(1)
@@ -250,7 +261,6 @@ func main() {
 	fileContent := readFileAndReturnAsString(filename)
 	// Get all the pdf urls
 	extractedURL = extractPDFLinks(fileContent)
-	log.Println(len(extractedURL))
 	// Remove duplicates
 	extractedURL = removeDuplicatesFromSlice(extractedURL) // Remove duplicate URLs
 	outputDir := "PDFs/"                                   // Directory to store downloaded PDFs
