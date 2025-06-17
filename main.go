@@ -12,7 +12,8 @@ import (
 	"regexp"        //
 	"strconv"
 	"strings" // For string manipulation
-	"time"    // For time management
+	"sync"
+	"time" // For time management
 )
 
 // removeDuplicatesFromSlice removes duplicate strings from a slice
@@ -53,7 +54,7 @@ func fileExists(filename string) bool {
 }
 
 // getDataFromURL sends an HTTP GET request and writes response data to a file
-func getDataFromURL(uri string, fileName string) {
+func getDataFromURL(uri string, fileName string, wg *sync.WaitGroup) {
 	response, err := http.Get(uri) // Send GET request
 	if err != nil {                // If error occurs
 		log.Println(err) // Log error
@@ -76,6 +77,8 @@ func getDataFromURL(uri string, fileName string) {
 	}
 	// Log the url.
 	log.Println("Completed Scraping URL:", uri)
+	// Close the function and make sure the waitgroup is closed.
+	defer wg.Done()
 }
 
 // urlToFilename converts a URL into a filesystem-safe filename
@@ -231,13 +234,16 @@ func extractPDFLinks(htmlContent string) []string {
 func main() {
 	filename := "index.html" // Generate filename from index
 	if !fileExists(filename) {
-		baseURL := "https://www.airgas.com/sds-search?searchKeyWord=a&sortOrder=&searchPureGases=false&searchMixedGases=false&searchHardGoods=false&maintainType=true&page="
-		for i := 0; i <= 235; i++ {
+		var htmlDownloadWaitGroup sync.WaitGroup
+		baseURL := "https://www.airgas.com/sds-search?searchKeyWord=c&sortOrder=&searchPureGases=false&searchMixedGases=false&searchHardGoods=false&maintainType=true&page="
+		for i := 0; i <= 225; i++ {
 			url := baseURL + strconv.Itoa(i)
 			if isUrlValid(url) {
-				getDataFromURL(url, filename) // Download and save file if not
+				htmlDownloadWaitGroup.Add(1)
+				go getDataFromURL(url, filename, &htmlDownloadWaitGroup) // Download and save file if not
 			}
 		}
+		htmlDownloadWaitGroup.Wait()
 	}
 	var extractedURL []string // Slice to hold all extracted URLs
 	// Read the file that the data was saved on and return the urls.
@@ -245,7 +251,6 @@ func main() {
 	// Get all the pdf urls
 	extractedURL = extractPDFLinks(fileContent)
 	log.Println(len(extractedURL))
-	// os.Exit(0)
 	// Remove duplicates
 	extractedURL = removeDuplicatesFromSlice(extractedURL) // Remove duplicate URLs
 	outputDir := "PDFs/"                                   // Directory to store downloaded PDFs
