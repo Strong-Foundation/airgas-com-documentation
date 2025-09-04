@@ -9,6 +9,9 @@ on:
   # Allow the workflow to be manually triggered from the GitHub UI
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 # Define the set of jobs to run
 jobs:
   # Name of the job
@@ -23,6 +26,8 @@ jobs:
       # Check out the repository code onto the runner
       - name: Check out code
         uses: actions/checkout@v5 # Official GitHub action to clone the repo
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       # Set up the Go environment
       - name: Set up Go
